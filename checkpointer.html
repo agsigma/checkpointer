@@ -1,109 +1,9 @@
 
 <!DOCTYPE html>
 <head>
+<script src="js/checkpointer.js"></script>
 <script>
-// odpala callback kiedy tylko obj.prop zostanie zmienione na nie undefined, albo od razu jesli nie jest undefined
-// chyba ze zdefiniowane valueChecker - wtedy sprawdza wartosc
-var watchPropOnce = function(obj, prop, callback, valueChecker) {    	
-	var value = undefined;
-	var CALLBACKS_QUEUE = "__dsaghyda765asfda5";
-	var propDecription;
-	var extend = function() {		
-		var k, v, l1;
-		var obj1 = arguments[0];
-		for (l1 = 1; l1 < arguments.length; l1++) {
-			for (k in arguments[l1]) {
-				obj1[k] = arguments[l1][k];
-			}
-		}
-		return obj1;
-	}	
-	valueChecker = valueChecker || function(val) { /* console.log(obj,prop, val); */ return typeof(val) != 'undefined'; };
-	
-	callback = callback || function() {};
-	if (valueChecker(obj[prop])) {
-		callback();
-		return;
-	}
-	if (!Object.defineProperty) {
-		// throw 'Object.defineProperty is not defined';
-		console.log('Object.defineProperty is not defined');
-		return;
-	}
-	if (!!obj[prop + CALLBACKS_QUEUE]) {
-		obj[prop + CALLBACKS_QUEUE].push(callback);
-		return;
-	}
-	
-	value = this[prop];
-	propDecription = Object.getOwnPropertyDescriptor(obj, prop) || {};
-	delete(propDecription['value']);	
-	/* jesli wlasciwosc nie jest writable to i tak nigdy sie nie zmieni, dodatkowo:
-	   https://bugzilla.mozilla.org/show_bug.cgi?id=647484
-	   wiec przy przywracaniu wlasciowsci(defineProperty w setterze) ustawiamy writable na true
-	*/
-	delete(propDecription['writable']);	
-	Object.defineProperty(obj, prop, extend({ 
-			configurable: true, 
-			enumerable: true, 			
-		},
-		propDecription, 
-		{                
-			'set': function(val){                    				
-				var callbacksQueue;
-				value = val;
-				if (valueChecker(val)) {				
-					callbacksQueue = obj[prop + CALLBACKS_QUEUE];
-					delete(obj[prop]);
-					delete(obj[prop + CALLBACKS_QUEUE]);
-					Object.defineProperty(obj, prop, extend({configurable: true, enumerable: true }, propDecription, {writable: true}));
-					obj[prop] = value;
-					callbacksQueue.forEach(function(callback) {
-						callback();
-					});				
-				}
-				// delete(callbacksQueue);
-				
-			},
-			'get' : function() {
-				return value;
-			}
-		})
-	);			
-	Object.defineProperty(obj, prop + CALLBACKS_QUEUE, { 
-		configurable: true, 
-		enumerable: false, 			
-		writable: false,
-		value: []
-	});
-	obj[prop + CALLBACKS_QUEUE].push(callback);	
-	// console.log('Added queue: ', prop + CALLBACKS_QUEUE, obj[prop + CALLBACKS_QUEUE])
-}
 
-var loader = function(props, callback, callbackThis) {	
-	var counter = props.length;
-    var checkCounter = function() {
-		var modules;
-        if (counter == 0) {
-			modules = [];
-			props.forEach(function(module) {
-				modules.push(module[0][module[1]]);
-				// console.log(module, module[0][module[1]]);
-			});
-            callback.apply(callbackThis, modules);
-        }
-    }
-    
-    callback = callback || function() {};
-    callbackThis = callbackThis || this;
-    
-    props.forEach(function(v) {
-        watchPropOnce(v[0], v[1], function() {
-			counter--;
-			checkCounter();
-		}, v[2])
-    });
-}
 
 assert = function(condition, message, succesMessage) {
     if (!condition) {
@@ -123,7 +23,7 @@ enumerableProperties = function(obj) {
 console.log('Test1');
 testObj1 = {};
 orderCheck = "";
-loader([[testObj1, 'prop1'], [testObj1, 'prop2']], function(prop1, prop2) {
+checkpointer.onceLoaded([[testObj1, 'prop1'], [testObj1, 'prop2']], function(prop1, prop2) {
 	orderCheck += '2';
 	assert(prop1 =='1' && prop2 == '2' && this == 123, "Test1:1 failed", "Test1:1 passed");
 }, 123);
@@ -139,11 +39,11 @@ console.log('Test2: Multiple objects/callbacks, number of own properties');
 testObj2 = {};
 testObj3 = {};
 orderCheck = "";
-loader([[testObj2, 'prop1'], [testObj2, 'prop2']], function(prop1, prop2) {
+checkpointer.onceLoaded([[testObj2, 'prop1'], [testObj2, 'prop2']], function(prop1, prop2) {
 	orderCheck += '3';
 	assert(prop1 =='A' && prop2 == 'B', "Test2:1 failed", "Test2:2 passed");
 });
-loader([[testObj2, 'prop1'], [testObj3, 'prop1']], function(prop1, prop1bis) {
+checkpointer.onceLoaded([[testObj2, 'prop1'], [testObj3, 'prop1']], function(prop1, prop1bis) {
 	orderCheck += '5';
 	assert(prop1 =='A' && prop1bis == 'C', "Test2:2 failed", "Test2:2 passed");
 });
@@ -165,7 +65,7 @@ orderCheck = '';
 window.module1 = true;
 testObj10 = {};
 orderCheck += '1';
-loader([[window, 'module1'], [testObj10, 'prop1']], function(module1, prop1) {
+checkpointer.onceLoaded([[window, 'module1'], [testObj10, 'prop1']], function(module1, prop1) {
 	orderCheck += '2';	
 });
 testObj10.prop1 = 111;
@@ -176,7 +76,7 @@ assert(orderCheck == "123", 'Test3: Wrong order of execution', 'Test3 passed');
 console.log('Test4: use with native object(window)');
 orderCheck = '';
 orderCheck += '1';
-loader([[window, 'module2']], function(module) {
+checkpointer.onceLoaded([[window, 'module2']], function(module) {
 	orderCheck += '3';	
 });
 orderCheck += '2';
@@ -186,7 +86,7 @@ assert(orderCheck == "123", 'Test4: Wrong order of execution: ' + orderCheck, 'T
 console.log('Test5: use with native object(window), notloaded module');
 orderCheck = '';
 orderCheck += '1';
-loader([[window, 'module3']], function(module) {
+checkpointer.onceLoaded([[window, 'module3']], function(module) {
 	orderCheck += '3';	
 	assert(false, 'Unexpected executionof callback');
 });
@@ -195,7 +95,7 @@ assert(orderCheck == "12", 'Test5: Wrong order of execution', 'Test5 passed');
 
 console.log('Test6: Accessing property before assigment');
 testObj6 = {};
-loader([[testObj6, 'prop1']], function(prop1) {
+checkpointer.onceLoaded([[testObj6, 'prop1']], function(prop1) {
 	assert(testObj6.prop1 == prop1 && testObj6.prop1 == 'A', 'Incorect property value');
 });
 assert(testObj6.prop1 == undefined, 'Test6: Incorect property value');
@@ -206,7 +106,7 @@ assert(true, '', 'Test 6 passed');
 console.log('Test7: Setting property to undefined(shouldn\'t trigger callback)');
 orderCheck = '';
 testObj7 = {};
-loader([[testObj7, 'prop1']], function(prop1) {
+checkpointer.onceLoaded([[testObj7, 'prop1']], function(prop1) {
 	orderCheck += '2';
 });
 orderCheck += '1';
@@ -218,7 +118,7 @@ console.log('Test8: Property equals null(should trigger callback)');
 orderCheck = '';
 orderCheck += '1';
 testObj8 = {prop1: null};
-loader([[testObj8, 'prop1']], function(prop1) {
+checkpointer.onceLoaded([[testObj8, 'prop1']], function(prop1) {
 	orderCheck += '2';
 });
 orderCheck += '3';
@@ -229,7 +129,7 @@ console.log('Test9: All modules loaded before callback assignment');
 orderCheck = '';
 orderCheck += '1';
 testObj9 = {module1: "module1", module2: 'module2'};
-loader([[testObj9, 'module1'], [testObj9, 'module2']], function(module1, module2) {
+checkpointer.onceLoaded([[testObj9, 'module1'], [testObj9, 'module2']], function(module1, module2) {
 	orderCheck += '2';
 });
 orderCheck += '3';
@@ -240,7 +140,7 @@ console.log('Test10: Wainting for value to be exacly "ABC"');
 orderCheck = '';
 orderCheck += '1';
 testObj10 = {};
-loader([[testObj10, 'prop1', function(val) {return val === 'ABC';}]], function(prop1) {
+checkpointer.onceLoaded([[testObj10, 'prop1', function(val) {return val === 'ABC';}]], function(prop1) {
 	orderCheck += 'C';
 });
 orderCheck += '2';
@@ -259,7 +159,7 @@ console.log('Test11: Multiple changes');
 orderCheck = '';
 testObj11 = {prop1:13};
 orderCheck += '1';
-watchPropOnce(testObj11, 'prop1', function(){
+checkpointer.watchPropOnce(testObj11, 'prop1', function(){
 	orderCheck += 'C';
 });
 orderCheck += '2';
@@ -269,7 +169,7 @@ testObj11.prop1 = 15;
 orderCheck += '4';
 testObj11.prop1 = 16;
 orderCheck += '5';
-watchPropOnce(testObj11, 'prop1', function(){
+checkpointer.watchPropOnce(testObj11, 'prop1', function(){
 	orderCheck += 'D';
 });
 orderCheck += '6';
@@ -284,7 +184,7 @@ testObj12 = {};
 assert(enumerableProperties(testObj12).length == 0, 'Test12 testObj12: wrong number of enumerable properties(0)');
 assert(Object.getOwnPropertyNames(testObj12).length == 0, 'Test12 testObj12: wrong number of own properties(0)');
 orderCheck = "";
-loader([[testObj12, 'prop1'], [testObj12, 'prop2']], function(prop1, prop2) {
+checkpointer.onceLoaded([[testObj12, 'prop1'], [testObj12, 'prop2']], function(prop1, prop2) {
 	assert(enumerableProperties(testObj12).length == 2, 'Test12 testObj12: wrong number of enumerable properties(C)');
 	assert(Object.getOwnPropertyNames(testObj12).length == 2, 'Test12 testObj12: wrong number of own properties(C)');
 	orderCheck += 'C';	
