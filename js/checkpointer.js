@@ -75,34 +75,7 @@ var checkpointer = (function(loader) {
 		// console.log('Added queue: ', prop + CALLBACKS_QUEUE, obj[prop + CALLBACKS_QUEUE])
 	}
 
-	loader = function(props, callback, callbackThis) {	
-		var counter = props.length;
-		var checkCounter = function() {
-			var modules;
-			if (counter == 0) {
-				modules = [];
-				props.forEach(function(module) {
-					modules.push(module[0][module[1]]);
-					// console.log(module, module[0][module[1]]);
-				});
-				callback.apply(callbackThis, modules);
-			}
-		}
-		
-		callback = callback || function() {};
-		callbackThis = callbackThis || this;
-		
-		props.forEach(function(v) {
-			watchPropOnce(v[0], v[1], function() {
-				counter--;
-				checkCounter();
-			}, v[2])
-		});
-	}
-	loader.watchPropOnce = watchPropOnce;
-	loader.modules = {};
-	loader.__uniqId = 0;
-	loader.onceLoaded = function(required, callback, callbackThis) {
+	var onceLoaded  = function(required, callback, callbackThis) {
 		var name;		
 		var callbacks;
 		var required = required || [];		
@@ -111,9 +84,11 @@ var checkpointer = (function(loader) {
 			var requiredModules = [];
 			if (counter == 0) {
 				requiredModules = required.map(function(name) {
-					if (typeof(name) == 'string') {
+					if (typeof(name) == 'string') {/*named module*/
 						return loader.modules[name].module;
-					} else {
+					} else if (typeof(name) == 'function') { /*condition check*/
+						return undefined;
+					} else {/*property watcher*/
 						return name[0][name[1]];
 					}
 				});
@@ -130,6 +105,11 @@ var checkpointer = (function(loader) {
 					counter--;
 					checkCounter();
 				})
+			} else if (typeof(moduleName) == 'function') { 
+				loader.watchConditionOnce(moduleName, function() {
+					counter--;
+					checkCounter();
+				});
 			} else {
 				watchPropOnce(moduleName[0], moduleName[1], function() {
 					counter--;
@@ -140,7 +120,33 @@ var checkpointer = (function(loader) {
 		if (required.length == 0) {
 			return callback.apply(callbackThis);
 		}
-	},
+	}
+	
+	loader = onceLoaded;	
+	loader.modules = {};
+	loader.__uniqId = 0;
+	loader.clock = {};
+	loader.clock.callbacks = [];
+	loader.clock.addConditionCheck = function(condition, callback) {
+		var checkConditions = (function() {			
+			this.callbacks.forEach(function(el, k) {
+				var condition = el[0], callback = el[1];
+				if (condition()) {
+					this.callbacks.splice(k, 1);
+					if (typeof(callback) == 'function') { 
+						callback();
+					}					
+				}			
+			}, this);			
+			if (this.callbacks.length > 0) {
+				setTimeout(checkConditions.bind(this), 50);
+			}
+		}).bind(this);
+		this.callbacks.push([condition, callback]);
+		setTimeout(checkConditions.bind(this), 50);
+	}
+	loader.watchPropOnce = watchPropOnce;
+	loader.onceLoaded = onceLoaded;
 	loader.setModuleOnce = function(name, required, module/* object or function returning object */, options) {
 		var callbacks;
 		var required = required || [];		
@@ -160,6 +166,8 @@ var checkpointer = (function(loader) {
 				requiredModules = required.map(function(name) {
 					if (typeof(name) == 'string') {
 						return loader.modules[name].module;
+					} else if (typeof(name) == 'function') { /*condition check*/
+						return undefined;
 					} else {
 						return name[0][name[1]];
 					}
@@ -191,6 +199,11 @@ var checkpointer = (function(loader) {
 					counter--;
 					checkCounter();
 				})
+			} else if (typeof(moduleName) == 'function') { 
+				loader.watchConditionOnce(moduleName, function() {
+					counter--;
+					checkCounter();
+				});
 			} else {
 				watchPropOnce(moduleName[0], moduleName[1], function() {
 					counter--;
@@ -212,6 +225,13 @@ var checkpointer = (function(loader) {
 			console.log('watchModuleOnce: callback is not a function');
 		}
 		this.setModuleOnce(name);
+	}
+	loader.watchConditionOnce = function(condition, callback /* w parametrze dostaje modul */) {					
+		if (condition()) {
+			!(typeof(callback) == "function") || callback();
+		} else {
+			this.clock.addConditionCheck(condition, callback);
+		}		
 	}
 	return loader;
 })();

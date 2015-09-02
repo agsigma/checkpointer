@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Refactored date examples</title>
+ 
+  <link rel="stylesheet" href="qunit-1.18.0.css">
+  <script src="qunit-1.18.0.js"></script>  
+  <script src="../js/checkpointer.js"></script>
+ 
+  <script>
+	QUnit.test("checkpointer: named modules 1", function( assert ) {
+		var orderCheck = "";        
+		var module1 = {val:1}, module2 = {val:2}, module3 = {val:3};
+		orderCheck += "S0";
+		checkpointer(['module1', 'module2'], function(m1, m2) {
+			assert.equal(m1==module1 && m2==module2, true);
+			orderCheck += "C0";
+		});
+		checkpointer(['module2'], function(m2) {		
+			assert.equal(m2==module2, true);
+			orderCheck += "C1";
+		});
+		orderCheck += "S1";
+		checkpointer.setModuleOnce('module1', ['module2', 'module3'], function(m2, m3) {
+			orderCheck += "M1";
+			assert.equal(m2==module2 && m3==module3, true);
+			return module1;
+		});
+		orderCheck += "S2";
+		checkpointer.setModuleOnce('module2', [], function() {
+			orderCheck += 'M2';
+			return module2;
+		});
+		orderCheck += "S3";
+		checkpointer.setModuleOnce('module3', [], function() {
+			orderCheck += "M3";
+			return module3;
+		});	
+		orderCheck += "S4";	
+		assert.equal(orderCheck, "S0S1S2M2C1S3M3M1C0S4");
+	});
+	
+	QUnit.test("checkpointer: clock check", function( assert ) {
+		var orderCheck = "";        
+		var module1 = {val:1}, module2 = {val:2}, module3 = {val:3};		
+		var flag = false;
+		assert.equal(checkpointer.clock.callbacks.length, 0);		
+		checkpointer([
+				function() {orderCheck+= "check"; return flag == true;}
+			], function() {
+				orderCheck += "C0";
+				assert.equal(checkpointer.clock.callbacks.length, 0);						
+				assert.equal(orderCheck, "checkcheckC0"); /* from initial condition check, and check inside ticker */		
+			});		
+		assert.equal(orderCheck, "check"); /* from initial condition check */
+		assert.equal(checkpointer.clock.callbacks.length, 1);				
+		Array(10000000).map(function(v, k) {
+			return Math.sin(Math.random());			
+		});
+		assert.equal(orderCheck, "check");	
+		flag = true;		
+		assert.equal(checkpointer.clock.callbacks.length, 1);		
+		assert.equal(orderCheck, "check");						
+	});
+	
+	
+	setTimeout(function() {	
+		QUnit.test("checkpointer: named modules, conditions, watch property", function( assert ) {
+			var orderCheck = "";        
+			var module1 = {val:1}, module2 = {val:2}, module3 = {val:3};
+			assert.equal(checkpointer.clock.callbacks.length, 0);		
+			orderCheck += "S0";		
+			checkpointer(['t2_module2'], function(m2) {		
+				assert.equal(m2, module2);
+				orderCheck += "C0";
+			});
+			orderCheck += "S1";
+			checkpointer.setModuleOnce('t2_module1', [
+					't2_module2',	
+					function() {return !!document.getElementById('testElem1');},
+					[window, 'globalFlag', function() { return window.globalFlag == 'exact';}],
+					
+				], function(m2, nothing, globalFlag) {
+				orderCheck += "M1";
+				console.log(arguments);
+				assert.equal(m2, module2);
+				assert.equal(nothing, undefined);
+				assert.equal(globalFlag, 'exact');
+				return module1;
+			});
+			orderCheck += "S2";
+			checkpointer.setModuleOnce('t2_module2', [], function() {
+				orderCheck += 'M2';
+				return module2;
+			});
+			orderCheck += "S3";
+			assert.equal(orderCheck, "S0S1S2M2C0S3");		
+			globalFlag = "exact";
+			assert.equal(orderCheck, "S0S1S2M2C0S3");
+			assert.equal(checkpointer.clock.callbacks.length, 1);
+			testEl=document.createElement('div');
+			testEl.id="testElem1";
+			document.body.appendChild(testEl);		
+			setTimeout(function() {
+				assert.equal(orderCheck, "S0S1S2M2C0S3M1");
+				assert.equal(checkpointer.clock.callbacks.length, 0);
+			}, 2000);			
+			
+		});
+	}, 5000);	
+  </script>
+</head>
+<body>
+ 
+<div id="qunit"></div>
+ 
+</body>
+</html>
