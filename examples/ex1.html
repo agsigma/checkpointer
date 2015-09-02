@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<head>
+<script src="../js/checkpointer.js"></script>
+<script>
+checkpointer(['colors', function() {return !!window.flag;}, function() {return !!document.body;} ], function(col) { 
+		col('red'); 
+	});
+checkpointer.setModuleOnce('colors', [], function() { 
+	return function(color) {
+		document.body.style.border = '10px solid ' + color;
+	}; 
+});
+flag = "GO";
+</script>
+</head>
+<body>
+	<h1>Example 1</h1>
+</body>
+</html>

@@ -30,7 +30,7 @@ var checkpointer = (function(loader) {
 			return;
 		}
 		
-		value = this[prop];
+		value = obj[prop];		
 		propDecription = Object.getOwnPropertyDescriptor(obj, prop) || {};
 		delete(propDecription['value']);	
 		/* jesli wlasciwosc nie jest writable to i tak nigdy sie nie zmieni, dodatkowo:
@@ -226,7 +226,7 @@ var checkpointer = (function(loader) {
 		}
 		this.setModuleOnce(name);
 	}
-	loader.watchConditionOnce = function(condition, callback /* w parametrze dostaje modul */) {					
+	loader.watchConditionOnce = function(condition, callback) {					
 		if (condition()) {
 			!(typeof(callback) == "function") || callback();
 		} else {

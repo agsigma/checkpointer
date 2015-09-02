@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<head>
+<script src="../js/checkpointer.js"></script>
+<script>
+checkpointer(['colors', [window, 'flag'], [document, 'body', function(el) { return !!el;}]], function(col) { 
+		col('red'); 
+	});
+checkpointer.setModuleOnce('colors', [], function() { 
+	return function(color) {
+		document.body.style.border = '10px solid ' + color;
+	}; 
+});
+flag = "GO";
+
+</script>
+</head>
+<body>
+	<h1>Example 2: fail</h1>
+	<p><em>watchProperpty</em> shouldn't be used on native properties.</p>
+</body>
+</html>

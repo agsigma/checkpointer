@@ -1,2 +1,4 @@
 # checkpointer
-Loading named modules is not tested.
+
+Notes:
+Reconsider using setTimeout(0)
