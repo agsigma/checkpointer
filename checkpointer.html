@@ -202,6 +202,18 @@ assert(Object.getOwnPropertyNames(testObj12).length == 2, 'Test12 testObj12: wro
 orderCheck += '3';
 assert(orderCheck == '12C3', 'Test12: Wrong order of execution');
 console.log('Test12 passed');
+
+console.log('Test13: Reading value of watched property');
+testObj13 = {'prop' : 'test'};
+assert(testObj13.prop == 'test', 'Test13: Invalid value of prop(1)');
+checkpointer([[testObj13, 'prop', function(val) {return val=='OK';}]], function(prop) {
+		assert(testObj13.prop == 'OK', 'Test13: Invalid value of prop(C)');
+});
+assert(testObj13.prop == 'test', 'Test13: Invalid value of prop(2)');
+testObj13.prop = 'OK';
+assert(testObj13.prop == 'OK', 'Test13: Invalid value of prop(3)');
+console.log('Test13 passed');
+
 </script>
 </head>
 <body>

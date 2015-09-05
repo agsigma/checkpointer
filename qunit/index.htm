@@ -41,6 +41,20 @@
 		assert.equal(orderCheck, "S0S1S2M2C1S3M3M1C0S4");
 	});
 	
+	// https://github.com/agsigma/checkpointer/issues/1
+	QUnit.test("checkpointer: named modules, onceLoaded", function( assert ) {
+		var orderCheck = "";        
+		var module1 = {val:1}, module2 = {val:2}, module3 = {val:3};
+		orderCheck += "S0";		
+		checkpointer.setModuleOnce('m2', ['m1'], function(m1) {orderCheck += 'M2'; return {}; })
+		orderCheck += "S1";		
+		checkpointer(['m2'], function() { orderCheck += 'C1'; })
+		orderCheck += "S2";		
+		checkpointer.setModuleOnce('m1', [], function() {orderCheck += 'M1'; return {'prop':'val'}; })
+		orderCheck += "S3";		
+		assert.equal(orderCheck, "S0S1S2M1M2C1S3");
+	});
+	
 	QUnit.test("checkpointer: clock check", function( assert ) {
 		var orderCheck = "";        
 		var module1 = {val:1}, module2 = {val:2}, module3 = {val:3};		

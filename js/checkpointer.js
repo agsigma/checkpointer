@@ -152,6 +152,7 @@ var checkpointer = (function(loader) {
 		var required = required || [];		
 		var counter = required.length;		
 		var setModule = function(requiredModules) {
+			var callbacks = loader.modules[name].callbacksQueue || [];		
 			loader.modules[name] = {
 				'loaded' : true,
 				'module' : typeof(module) == 'function' ? module.apply(this, requiredModules) : module
@@ -161,7 +162,7 @@ var checkpointer = (function(loader) {
 			});
 		}
 		var checkCounter = function() {
-			var requiredModules = [];
+			var requiredModules = [];			
 			if (counter == 0) {
 				requiredModules = required.map(function(name) {
 					if (typeof(name) == 'string') {
