@@ -79,10 +79,11 @@
 	});
 	
 	
-	setTimeout(function() {	
+	
 		QUnit.test("checkpointer: named modules, conditions, watch property", function( assert ) {
 			var orderCheck = "";        
 			var module1 = {val:1}, module2 = {val:2}, module3 = {val:3};
+			var done = assert.async()
 			assert.equal(checkpointer.clock.callbacks.length, 0);		
 			orderCheck += "S0";		
 			checkpointer(['t2_module2'], function(m2) {		
@@ -119,10 +120,32 @@
 			setTimeout(function() {
 				assert.equal(orderCheck, "S0S1S2M2C0S3M1");
 				assert.equal(checkpointer.clock.callbacks.length, 0);
+				done();
 			}, 2000);			
 			
+		});	
+		
+	QUnit.test("checkpointer: setModuleOnce:options:saveto", function( assert ) {
+		var orderCheck = "";        
+		var module1 = {val:1}, globobj = {};		
+		orderCheck += "S0";
+		checkpointer(['t3_module1'], function(m1) {
+			assert.equal(m1==module1, true);
+			orderCheck += "C0";
+		});		
+		orderCheck += "S1";
+		checkpointer.setModuleOnce('t3_module1', [], function() {
+			orderCheck += "M1";			
+			return module1;
+		}, 
+		{
+			'saveto' : [globobj, 'module1']
 		});
-	}, 5000);	
+		orderCheck += "S2";
+		assert.equal(globobj.module1, module1, 'Module1 saved in globobj.module1');
+		orderCheck += "S3";		
+		assert.equal(orderCheck, "S0S1M1C0S2S3");
+	});		
   </script>
 </head>
 <body>

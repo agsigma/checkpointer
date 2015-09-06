@@ -157,6 +157,9 @@ var checkpointer = (function(loader) {
 				'loaded' : true,
 				'module' : typeof(module) == 'function' ? module.apply(this, requiredModules) : module
 			};
+			if (options.saveto && options.saveto[0]) {
+				options.saveto[0][options.saveto[1]] = loader.modules[name].module;
+			}
 			callbacks.forEach(function(callback) {
 				callback.apply(this, [loader.modules[name].module]);
 			});
@@ -177,6 +180,7 @@ var checkpointer = (function(loader) {
 			}
 		}
 		
+		options = options || {};
 		loader.modules[name] = loader.modules[name] || {};
 		callbacks = loader.modules[name].callbacksQueue || [];		
 		
