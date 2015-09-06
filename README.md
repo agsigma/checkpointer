@@ -5,7 +5,10 @@ Readme under contruction.
 #### checkpointer.onceLoaded(required, callback)
 Fires callback after all modules specified in required table are loaded and all conditions fulfilled.
 ```javascript
-checkpointer(['jQuery', function() {return !!document.getElementById('painting');}], function($) {
+checkpointer([
+  'jQuery', 
+  function() {return !!document.getElementById('painting');}
+], function($) {
   $('#painting').css('border', '10px solid black');
 });
 setTimeout(function() {
