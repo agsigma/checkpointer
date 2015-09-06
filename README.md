@@ -35,4 +35,4 @@ checkpointer.onceLoaded(['switcher'], function(sw) {
 
 
 #### Notes:
-Reconsider using setTimeout(0)
+Reconsider using setTimeout(0) or wrapping callbacks, modules contructors in try-catch.
