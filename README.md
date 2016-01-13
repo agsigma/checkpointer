@@ -11,6 +11,7 @@ checkpointer([
 ], function($) {
   $('#painting').css('border', '10px solid black');
 });
+
 setTimeout(function() {
   $('<div id="painting">asddas</div>').appendTo('body');
 }, 1500);
@@ -28,14 +29,16 @@ checkpointer.setModuleOnce('switcher', ['jQuery'], function($) {
   switcher.elem.appendTo('body');
   return switcher;
 });
+
 checkpointer.setModuleOnce('jQuery', [], function() {
-  return jQuery;
-})
+  return window.jQuery;
+});
+
 checkpointer.onceLoaded(['switcher'], function(sw) {
   sw.turnOff();
 });
 ```
 
 
-#### Notes:
+#### Dev. notes:
 Reconsider using setTimeout(0) or wrapping callbacks and modules contructors in try-catch.
